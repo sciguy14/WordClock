@@ -1,0 +1,3 @@
+[submodule "Software/matrix"]
+	path = Software/matrix
+	url = git@github.com:adafruit/rpi-rgb-led-matrix.git
