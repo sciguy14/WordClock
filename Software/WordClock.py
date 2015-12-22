@@ -16,9 +16,8 @@ MATRIX_H      = 32 # Number of Actual Y Pixels
 MATRIX_DEPTH  = 3  # Color Depth (RGB=3)
 MATRIX_DIV    = 2  # Physical Matrix is Half of Pixel Matrix
 
-# Number of Rows & Number of Chained Displays
+# Enumerate RGB Matrix Object
 matrix = Adafruit_RGBmatrix(MATRIX_H, MATRIX_W/MATRIX_H)
-
 
 #Word Dictionary
 #Uses the Physical Grad mapping for the laser cut grid:
@@ -89,9 +88,30 @@ m = {
     "heart2"    : {"row" : 16, "start" : 16, "length" : 1, "height" : 1}
 }
 
-#generate the Pixel Buffer based on what words should be illuminated
-def setDisplay(words = []):
-    buff = [0] * MATRIX_W * MATRIX_H * MATRIX_DEPTH
+# Display Animation Sequences on the display
+def animation(seq="test"):
+    if seq == "test":
+        print "Running Test Sequence...",
+        for key in m.iterkeys():
+            setDisplay([key], [255,0,0])
+            time.sleep(1.0)
+            setDisplay([key], [0,255,0])
+            time.sleep(1.0)
+            setDisplay([key], [0,0,255])
+            time.sleep(1.0)
+        matrix.Clear()
+        print "Done."
+    else:
+        print "Uknown sequence."
+
+# Generate the Pixel Buffer based on what words should be illuminated
+# words is a list of the m word items to illuminate
+# color is the rgb byte values
+# fade is the transition time in seconds (float) (approximate)
+last_buff = [0] * MATRIX_W * MATRIX_H * MATRIX_DEPTH
+def setDisplay(words = [], color=[255,0,0], fade=0.1):
+    global last_buff
+    new_buff = [0] * MATRIX_W * MATRIX_H * MATRIX_DEPTH
     for word in words:
         ri = ((m[word]["row"] - 1) * MATRIX_DIV * MATRIX_DEPTH * MATRIX_W) + ((m[word]["start"]-1) * MATRIX_DIV * MATRIX_DEPTH)
         gi = ri + 1
@@ -99,12 +119,25 @@ def setDisplay(words = []):
         for y in xrange(m[word]["height"]*MATRIX_DIV):
             for x in xrange(m[word]["length"]*MATRIX_DIV):
                 adder = MATRIX_DEPTH*x + MATRIX_DEPTH*MATRIX_H*y
-                buff[ri + adder] = 255 #Set the Red Channel for this Word
-                buff[gi + adder] = 0 #Set the Green Channel for this Word
-                buff[bi + adder] = 0 #Set the Blue Channel for this Word
+                new_buff[ri + adder] = color[0] #Set the Red Channel for this Word
+                new_buff[gi + adder] = color[1] #Set the Green Channel for this Word
+                new_buff[bi + adder] = color[2] #Set the Blue Channel for this Word
 
-    matrix.SetBuffer(buff)
+    diff_buff = [j - i for i, j in zip(last_buff, new_buff)]
 
-setDisplay(['good', 'leah1', 'heart1', 'time', 'diem'])
-time.sleep(20.0)
-matrix.Clear()
+    for frame in xrange(20):
+        frame_buff = [0] * MATRIX_W * MATRIX_H * MATRIX_DEPTH
+        for i, val in enumerate(diff_buff):
+            frame_buff[i] = last_buff[i] + val*frame/19
+
+        matrix.SetBuffer(frame_buff)
+        time.sleep(fade/20.0) 
+
+        #TDOD: Timing still seems wrong...
+
+    last_buff = new_buff # Use this global var for enabling state fades
+
+    
+
+#Main Execution
+animation("test")
