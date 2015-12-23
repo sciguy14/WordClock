@@ -5,6 +5,7 @@
 # refresh operation needed.
 
 import sys, os, time, argparse
+from datetime import datetime
 # Uses the rgbmatrix.so library that is imported via a git submodule.
 # Folder must be added to path to enable import
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/matrix")
@@ -88,21 +89,40 @@ m = {
     "heart2"    : {"row" : 16, "start" : 16, "length" : 1, "height" : 1}
 }
 
-# Display Animation Sequences on the display
+# Display an animation Sequences on the display
 def animation(seq="test"):
     if seq == "test":
         print "Running Test Sequence...",
         for key in m.iterkeys():
             setDisplay([key], [255,0,0])
-            time.sleep(1.0)
+            time.sleep(0.2)
             setDisplay([key], [0,255,0])
-            time.sleep(1.0)
+            time.sleep(0.2)
             setDisplay([key], [0,0,255])
-            time.sleep(1.0)
+            time.sleep(0.2)
         matrix.Clear()
         print "Done."
     else:
         print "Uknown sequence."
+
+# Generates the Appropriate Word List, given a time. Defaults to Current Time
+def getTimeWords(t = datetime.now()):
+    words = []
+
+    # If it's morning, we say "Good morning!"
+    # Otherwise, we just say "Hi" "Hiya"
+    if t.hour > 5 and t.hour < 10:
+        words += ['good','morning!']
+    else:
+        words += ['hiya']
+
+    #"Carpe Diem", or "Time for Coffee"
+    # If it's late, we say "Time for Sleep"
+
+    #TODO: WIP
+    
+    
+
 
 # Generate the Pixel Buffer based on what words should be illuminated
 # words is a list of the m word items to illuminate
