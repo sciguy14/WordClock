@@ -28,6 +28,10 @@ FUCHSIA = [255, 0,   255]
 AQUA    = [0,   255, 255]
 WHITE   = [255, 255, 255]
 
+# Birthday
+BIRTH_MONTH = 8
+BIRTH_DAY = 29
+
 #Color Fade Order (for Leah <3)
 FADE_COLORS = [LIME, YELLOW, RED, FUCHSIA, BLUE, AQUA]
 
@@ -98,7 +102,6 @@ m = {
     "afternoon" : {"row" : 15, "start" : 5,  "length" : 9, "height" : 1},
     "you"       : {"row" : 15, "start" : 14, "length" : 3, "height" : 1},
     "by"        : {"row" : 16, "start" : 1,  "length" : 2, "height" : 1},
-    "bye"       : {"row" : 16, "start" : 1,  "length" : 3, "height" : 1},
     "evening"   : {"row" : 16, "start" : 3,  "length" : 7, "height" : 1},
     "jeremy"    : {"row" : 16, "start" : 10, "length" : 6, "height" : 1},
     "heart2"    : {"row" : 16, "start" : 16, "length" : 1, "height" : 1}
@@ -117,13 +120,10 @@ def getTimeWords(t=None):
     else:
         words += ['hiya']
 
-    # If it's Birthday, show that message. Otherwise...
     # If it's early, it's "Time for Coffee"
     # If it's a little later, we say "Carpe Diem"
     # If it's late, we say "Time for Sleep"
-    if t.month == 8 and t.day == 29:
-        words += ['happy','birthday']
-    elif t.hour > 5 and t.hour <= 9:
+    if t.hour > 5 and t.hour <= 9:
         words += ['time','for','coffee']
     elif t.hour > 9 and t.hour <= 12:
         words += ['carpe','diem']
@@ -284,6 +284,23 @@ def run(mode="clock", primary_color=RED, secondary_color=AQUA, modifiers=[]):
             tertiary_words  = []
             tertiary_color  = []
             #TODO: Add the other modifiers
+            brithday_message = False
+            if "birthday" in modifiers:
+                if t.month == BIRTH_MONTH and t.day == BIRTH_DAY:
+                    secondary_words += ['happy','birthday']
+                    birthday_message = True
+            if "friday" in modifiers and birthday_message == False:
+                #Note the birthday message over-rules the friday message
+                if t.weekday() == 4:
+                    secondary_words +=['happy','friday']
+            if "iloveyou" in modifiers:
+                #Uses the "I" in midnight, so it doesn't run if midnight is lit up
+                if "midnight" not in primary_words:
+                    secondary_words += ['i','love','you']
+            if "byjeremy" in modifiers:
+                #Uses "Clock" in "oclock", so it doesn't run if oclock is lit up
+                if "oclock" not in primary_words:
+                    secondary_words += ['this','is2','a2','word','clock','built','with','love','by','jeremy','heart2']
             if "leah" in modifiers:
                 tertiary_words = ['leah1', 'heart1']
                 tertiary_color = FADE_COLORS[fade_counter]
