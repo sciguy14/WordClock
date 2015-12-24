@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
-# Simple RGBMatrix example, using only Clear(), Fill() and SetPixel().
-# These functions have an immediate effect on the display; no special
-# refresh operation needed.
+# WordClock
+# Made for Leah Meyerholtz by Jeremy Blum
+# (c) 2016 Blum Idea Labs
+# www.jeremyblum.com
 
 import sys, os, time, argparse
 from datetime import datetime
@@ -18,11 +19,24 @@ MATRIX_H      = 32 # Number of Actual Y Pixels
 MATRIX_DEPTH  = 3  # Color Depth (RGB=3)
 MATRIX_DIV    = 2  # Physical Matrix is Half of Pixel Matrix
 
+# Colors
+RED     = [255, 0,   0  ]
+LIME    = [0,   255, 0  ]
+BLUE    = [0,   0,   255]
+YELLOW  = [255, 255, 0  ]
+FUCHSIA = [255, 0,   255]
+AQUA    = [0,   255, 255]
+WHITE   = [255, 255, 255]
+
+#Color Fade Order (for Leah <3)
+FADE_COLORS = [LIME, YELLOW, RED, FUCHSIA, BLUE, AQUA]
+
+
 # Enumerate RGB Matrix Object
 matrix = Adafruit_RGBmatrix(MATRIX_H, MATRIX_W/MATRIX_H)
 
 #Word Dictionary
-#Uses the Physical Grad mapping for the laser cut grid:
+#Uses the Physical Grid mapping for the laser cut grid:
 # X is 1 - 16 inclusive
 # Y is 1 - 16 includive
 # Origin is top left corner 
@@ -90,33 +104,10 @@ m = {
     "heart2"    : {"row" : 16, "start" : 16, "length" : 1, "height" : 1}
 }
 
-# Display an animation Sequence on the display
-def animation(seq="basic_test"):
-    if seq == "basic_test":
-        print "Testing each word & Color..."
-        for key in m.iterkeys():
-            print "  %s" % (key)
-            setDisplay([key], [255,0,0])
-            time.sleep(0.2)
-            setDisplay([key], [0,255,0])
-            time.sleep(0.2)
-            setDisplay([key], [0,0,255])
-            time.sleep(0.2)
-        matrix.Clear()
-        print "Done."
-    elif seq == "time_test":
-        print "Testing All Times..."
-        for h in xrange(24):
-            for m in xrange(60):
-                setDisplay(getTimeWords(datetime(2016, 01, 01, h, m, 0)))
-                time.sleep(0.2)
-        matrix.Clear()
-        print "Done."
-    else:
-        print "Uknown sequence."
-
-# Generates the Appropriate Word List, given a time. Defaults to Current Time
-def getTimeWords(t = datetime.now()):
+# Generates the Appropriate Word List, given a datetime object. Defaults to Current Time
+def getTimeWords(t=None):
+    if t is None:
+        t= datetime.now()
     words = []
 
     # If it's morning, we say "Good morning!"
@@ -211,24 +202,29 @@ def getTimeWords(t = datetime.now()):
     print "- " + (' '.join(words)).translate(None, digits)
 
     return words
-    
-
 
 # Generate the Pixel Buffer based on what words should be illuminated
-# words is a list of the m word items to illuminate
-# color is the rgb byte values
+# primary_words: The list of words to light up in the primary_color (usually the time)
+# secondary_words: The list of words to light up in the secondary color (usually a special message)
+# tertiary_words: The list of words to light up it the tertiary color (the Leah <3 Logo, in our case)
 # fade is the transition time in seconds (float) (approximate)
 last_buff = [0] * MATRIX_W * MATRIX_H * MATRIX_DEPTH
-def setDisplay(words = [], color=[255,0,0], fade=0.1):
+def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondary_color=AQUA, tertiary_words=[], tertiary_color = WHITE, fade=0.1):
     global last_buff
     new_buff = [0] * MATRIX_W * MATRIX_H * MATRIX_DEPTH
-    for word in words:
+    for word in primary_words + secondary_words + tertiary_words:
         ri = ((m[word]["row"] - 1) * MATRIX_DIV * MATRIX_DEPTH * MATRIX_W) + ((m[word]["start"]-1) * MATRIX_DIV * MATRIX_DEPTH)
         gi = ri + 1
         bi = ri + 2
         for y in xrange(m[word]["height"]*MATRIX_DIV):
             for x in xrange(m[word]["length"]*MATRIX_DIV):
                 adder = MATRIX_DEPTH*x + MATRIX_DEPTH*MATRIX_H*y
+                if word in primary_words:
+                    color = primary_color
+                elif word in secondary_words:
+                    color = secondary_color
+                elif word in tertiary_words:
+                    color = tertiary_color
                 new_buff[ri + adder] = color[0] #Set the Red Channel for this Word
                 new_buff[gi + adder] = color[1] #Set the Green Channel for this Word
                 new_buff[bi + adder] = color[2] #Set the Blue Channel for this Word
@@ -243,11 +239,64 @@ def setDisplay(words = [], color=[255,0,0], fade=0.1):
         matrix.SetBuffer(frame_buff)
         time.sleep(fade/20.0/4.0) #Approximating this...
 
-        #TDOD: Timing still seems wrong...
-
     last_buff = new_buff # Use this global var for enabling state fades
 
-    
+# Runs the Word Clock in a certain mode
+# mode (pick one):
+#   basic_test: Just lights up all the word units in all the colors to test them
+#   time_test: Runs through a full day at high speed in the primry color
+#   clock: Normal Clock mode. Endless Loop. Can Have modifiers applied. Shows time in primary color
+# primary_color: RGB primary color to use for clock words
+# secondary_color: RGB color to use for modifiers
+# modifiers (pass as a list):
+#   "leah":lights up "Leah <3" in slowly changing colors
+#   "birthday": Shows the birthday message in the secondary color (if it's Leah's birthday)
+#   "friday": Shows the Friday message in the secondary color
+#   "iloveyou": Ocassionally show the iloveyou message in the secondary color
+#   "byjeremy": Ocassionall the show byjeremy message in the secondary color
+def run(mode="clock", primary_color=RED, secondary_color=AQUA, modifiers=[]):
+    if mode == "basic_test":
+        print "Testing each word & Color..."
+        for key in m.iterkeys():
+            print "  %s" % (key)
+            setDisplay([key], RED)
+            time.sleep(0.2)
+            setDisplay([key], LIME)
+            time.sleep(0.2)
+            setDisplay([key], BLUE)
+            time.sleep(0.2)
+        matrix.Clear()
+        print "Done."
+    elif mode == "time_test":
+        print "Testing All Times..."
+        for h in xrange(24):
+            for m in xrange(60):
+                setDisplay(getTimeWords(datetime(2016, 01, 01, h, m, 0)),primary_color)
+                time.sleep(0.2)
+        matrix.Clear()
+        print "Done."
+    elif mode == "clock":
+        print "Running the Clock."
+        fade_counter = 0
+        while True:
+            primary_words   = getTimeWords()
+            secondary_words = []
+            tertiary_words  = []
+            tertiary_color  = []
+            #TODO: Add the other modifiers
+            if "leah" in modifiers:
+                tertiary_words = ['leah1', 'heart1']
+                tertiary_color = FADE_COLORS[fade_counter]
+
+            setDisplay(primary_words,primary_color,secondary_words,secondary_color,tertiary_words,tertiary_color)
+            fade_counter += 1
+            if fade_counter > 5:
+                fade_counter = 0
+
+            time.sleep(3)
+    else:
+        print "Uknown mode."  
 
 #Main Execution
-animation("time_test")
+if __name__ == '__main__':
+    run("clock", modifiers=["leah"])
