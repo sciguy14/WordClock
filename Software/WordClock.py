@@ -5,7 +5,7 @@
 # (c) 2016 Blum Idea Labs
 # www.jeremyblum.com
 
-import sys, os, time, argparse
+import sys, os, time, argparse, atexit, signal
 from datetime import datetime
 from string import digits
 # Uses the rgbmatrix.so library that is imported via a git submodule.
@@ -278,29 +278,28 @@ def run(mode="clock", primary_color=RED, secondary_color=AQUA, modifiers=[]):
     elif mode == "clock":
         print "Running the Clock."
         fade_counter = 0
+        secondary_counter = 90
         while True:
-            primary_words   = getTimeWords()
+            t = datetime.now()
+            primary_words   = getTimeWords(t)
             secondary_words = []
             tertiary_words  = []
             tertiary_color  = []
-            #TODO: Add the other modifiers
-            brithday_message = False
-            if "birthday" in modifiers:
-                if t.month == BIRTH_MONTH and t.day == BIRTH_DAY:
-                    secondary_words += ['happy','birthday']
-                    birthday_message = True
-            if "friday" in modifiers and birthday_message == False:
-                #Note the birthday message over-rules the friday message
-                if t.weekday() == 4:
-                    secondary_words +=['happy','friday']
-            if "iloveyou" in modifiers:
+            #TODO: Need to Test these.
+            if "birthday" in modifiers and t.month == BIRTH_MONTH and t.day == BIRTH_DAY and secondary_counter%5 == 0 and secondary_counter < 100:
+                secondary_words += ['happy','birthday']
+                print "        - Happy Birthday"
+            if "friday" in modifiers and t.weekday() == 4 and (secondary_counter+2)%5 == 0 and secondary_counter < 100:
+                secondary_words +=['happy','friday']
+                print "        - Happy Friday"
+            if "iloveyou" in modifiers and "midnight" not in primary_words and (secondary_counter+3)%20 == 0 and secondary_counter < 100:
                 #Uses the "I" in midnight, so it doesn't run if midnight is lit up
-                if "midnight" not in primary_words:
-                    secondary_words += ['i','love','you']
-            if "byjeremy" in modifiers:
+                secondary_words += ['i','love','you']
+                print "        - I Love You"
+            if "byjeremy" in modifiers and "oclock" not in primary_words and secondary_counter>=100 and secondary_counter<=105:
                 #Uses "Clock" in "oclock", so it doesn't run if oclock is lit up
-                if "oclock" not in primary_words:
-                    secondary_words += ['this','is2','a2','word','clock','built','with','love','by','jeremy','heart2']
+                secondary_words += ['this','is2','a2','word','clock','built','with','love','by','jeremy','heart2']
+                print "        - This is a word clock built with love by Jeremy <3"
             if "leah" in modifiers:
                 tertiary_words = ['leah1', 'heart1']
                 tertiary_color = FADE_COLORS[fade_counter]
@@ -309,11 +308,20 @@ def run(mode="clock", primary_color=RED, secondary_color=AQUA, modifiers=[]):
             fade_counter += 1
             if fade_counter > 5:
                 fade_counter = 0
+            secondary_counter += 1
+            if secondary_counter > 105:
+                fade_counter = 0
 
-            time.sleep(3)
+            time.sleep(5)
     else:
         print "Uknown mode."  
 
+def exit_handler():
+    print 'Script Aborted. Turning off Clock.'
+    matrix.Clear()
+
 #Main Execution
 if __name__ == '__main__':
-    run("clock", modifiers=["leah"])
+    atexit.register(exit_handler)
+    signal.signal(signal.SIGINT, lambda x,y: sys.exit(0))
+    run("clock", modifiers=["birthday","friday","iloveyou","byjeremy","leah"])
