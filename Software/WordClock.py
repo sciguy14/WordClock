@@ -310,7 +310,7 @@ def run(mode="clock", primary_color=RED, secondary_color=AQUA, modifiers=[]):
                 fade_counter = 0
             secondary_counter += 1
             if secondary_counter > 105:
-                fade_counter = 0
+                secondary_counter = 0
 
             time.sleep(5)
     else:
