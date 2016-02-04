@@ -1,4 +1,6 @@
-WordClock is a custom clock.
+WordClock
+---------
+It's a clock...with words.
 
 * Solder the shield together
 * Connect the shield to the Pi
@@ -14,3 +16,8 @@ WordClock is a custom clock.
 * Add this to crontab (`crontab -e`): `@reboot sudo /home/pi/WordClock.py > /dev/null 2>&1`
 * Reboot
 * The ethernet is no longer needed, but you can connect it briefly to auto-update the time if the RTC drifts.
+
+License
+-------
+This work is licensed under the [GNU GPL v3](http://www.gnu.org/licenses/gpl.html).
+Please share improvements or remixes with the community, and attribute me (Jeremy Blum, <http://www.jeremyblum.com>) when reusing portions of my code.
