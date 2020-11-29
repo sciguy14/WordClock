@@ -1,17 +1,19 @@
 #!/usr/bin/python
 
 # WordClock
-# Made for Leah Meyerholtz by Jeremy Blum
-# (c) 2016 Blum Idea Labs
+# Made for Leah by Jeremy
+# Original: (c) 2016 Blum Idea Labs
+# Updated: (c) 2020 Blum Idea Labs
 # www.jeremyblum.com
+
+# Follow the instructions in the GitHub Repo README for prerequisites that must be installed first.
 
 import sys, os, time, argparse, atexit, signal
 from datetime import datetime
 from string import digits
-# Uses the rgbmatrix.so library that is imported via a git submodule.
-# Folder must be added to path to enable import
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/matrix")
-from rgbmatrix import Adafruit_RGBmatrix
+
+# Assumes the installer script already installed the rgbmatrix library globally, configured for the Adafruit hat
+from rgbmatrix import RGBMatrix, RGBMatrixOptions
 
 # Constants
 MATRIX_W      = 32 # Number of Actual X Pixels
@@ -37,10 +39,18 @@ FADE_COLORS = [LIME, YELLOW, RED, FUCHSIA, BLUE, AQUA]
 
 
 # Enumerate RGB Matrix Object
-matrix = Adafruit_RGBmatrix(MATRIX_H, MATRIX_W/MATRIX_H)
+options = RGBMatrixOptions()
+options.rows = MATRIX_H
+options.cols = MATRIX_W
+options.pwm_bits = 8 # Frees up a tiny bit of CPU since 256 levels for each color is all we need.
+options.show_refresh_rate = 1
+options.limit_refresh_rate_hz = 100 # Forces a fixed refresh rate to reduce flicker
+options.hardware_mapping = 'adafruit-hat-pwm' # This assumes you did the hardware rework for the Adafruit hat flicker reduction. If not, use "adafruit-hat"
 
-#Word Dictionary
-#Uses the Physical Grid mapping for the laser cut grid:
+matrix = RGBMatrix(options = options)
+
+# Word Dictionary
+# Uses the Physical Grid mapping for the laser cut grid:
 # X is 1 - 16 inclusive
 # Y is 1 - 16 includive
 # Origin is top left corner 
@@ -157,7 +167,7 @@ def getTimeWords(t=None):
     elif t.minute > 52 and t.minute <= 57:
         words += ['five1','minutes','to']
 
-    #Hours
+    # Hours
     if t.minute > 32:
         disp_hour = t.hour + 1
     else:
@@ -190,7 +200,7 @@ def getTimeWords(t=None):
     elif disp_hour == 11 or disp_hour == 23:
         words += ['eleven']
 
-    #Time of Day
+    # Time of Day
     if (t.hour > 0 and t.hour < 11) or (t.hour == 0 and t.minute > 32) or (t.hour == 11 and t.minute <= 32):
         words += ['in','the','morning']
     elif (t.hour > 12 and t.hour < 18) or (t.hour == 12 and t.minute > 32):
@@ -208,38 +218,40 @@ def getTimeWords(t=None):
 # secondary_words: The list of words to light up in the secondary color (usually a special message)
 # tertiary_words: The list of words to light up it the tertiary color (the Leah <3 Logo, in our case)
 # fade is the transition time in seconds (float) (approximate)
-last_buff = [0] * MATRIX_W * MATRIX_H * MATRIX_DEPTH
+last_frame = matrix.CreateFrameCanvas()
+last_frame.Fill(0,0,0)
+matrix.SwapOnVSync(last_frame)
+print last_frame
 def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondary_color=AQUA, tertiary_words=[], tertiary_color = WHITE, fade=0.1):
-    global last_buff
-    new_buff = [0] * MATRIX_W * MATRIX_H * MATRIX_DEPTH
+    global last_frame
+    new_frame = matrix.CreateFrameCanvas()
     for word in primary_words + secondary_words + tertiary_words:
-        ri = ((m[word]["row"] - 1) * MATRIX_DIV * MATRIX_DEPTH * MATRIX_W) + ((m[word]["start"]-1) * MATRIX_DIV * MATRIX_DEPTH)
-        gi = ri + 1
-        bi = ri + 2
-        for y in xrange(m[word]["height"]*MATRIX_DIV):
-            for x in xrange(m[word]["length"]*MATRIX_DIV):
-                adder = MATRIX_DEPTH*x + MATRIX_DEPTH*MATRIX_H*y
+        pixel_x = (m[word]["start"]-1) * MATRIX_DIV
+        pixel_y = (m[word]["row"] - 1) * MATRIX_DIV
+        for y_adder in xrange(m[word]["height"]*MATRIX_DIV):
+            for x_adder in xrange(m[word]["length"]*MATRIX_DIV):
                 if word in primary_words:
                     color = primary_color
                 elif word in secondary_words:
                     color = secondary_color
                 elif word in tertiary_words:
                     color = tertiary_color
-                new_buff[ri + adder] = color[0] #Set the Red Channel for this Word
-                new_buff[gi + adder] = color[1] #Set the Green Channel for this Word
-                new_buff[bi + adder] = color[2] #Set the Blue Channel for this Word
+                new_frame.SetPixel(pixel_x + x_adder, pixel_y + y_adder, color[0], color[1], color[2])
 
-    diff_buff = [j - i for i, j in zip(last_buff, new_buff)]
+    # TODO: Reimplement Fading
+    #diff_buff = [j - i for i, j in zip(last_frame, new_frame)]
 
-    for frame in xrange(20):
-        frame_buff = [0] * MATRIX_W * MATRIX_H * MATRIX_DEPTH
-        for i, val in enumerate(diff_buff):
-            frame_buff[i] = last_buff[i] + val*frame/19
+    # Perform the fade between buffers
+    #for frame in xrange(20):
+    #    frame_buff = [0] * MATRIX_W * MATRIX_H * MATRIX_DEPTH
+    #    for i, val in enumerate(diff_buff):
+    #        frame_buff[i] = last_frame[i] + val*frame/19
 
-        matrix.SetBuffer(frame_buff)
-        time.sleep(fade/20.0/4.0) #Approximating this...
+    #    matrix.SwapOnVSync(frame_buff)
+    #    time.sleep(fade/20.0/4.0) #Approximating this...
 
-    last_buff = new_buff # Use this global var for enabling state fades
+    matrix.SwapOnVSync(new_frame)
+    last_frame = new_frame # Use this global var for enabling state fades
 
 # Runs the Word Clock in a certain mode
 # mode (pick one):
@@ -253,7 +265,7 @@ def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondar
 #   "birthday": Shows the birthday message in the secondary color (if it's Leah's birthday)
 #   "friday": Shows the Friday message in the secondary color
 #   "iloveyou": Ocassionally show the iloveyou message in the secondary color
-#   "byjeremy": Ocassionall the show byjeremy message in the secondary color
+#   "byjeremy": Ocassionally show the byjeremy message in the secondary color
 def run(mode="clock", primary_color=RED, secondary_color=AQUA, modifiers=[]):
     if mode == "basic_test":
         print "Testing each word & Color..."
@@ -285,7 +297,6 @@ def run(mode="clock", primary_color=RED, secondary_color=AQUA, modifiers=[]):
             secondary_words = []
             tertiary_words  = []
             tertiary_color  = []
-            #TODO: Need to Test these.
             if "birthday" in modifiers and t.month == BIRTH_MONTH and t.day == BIRTH_DAY and secondary_counter%5 == 0 and secondary_counter < 100:
                 secondary_words += ['happy','birthday']
                 print "        - Happy Birthday"
@@ -293,11 +304,11 @@ def run(mode="clock", primary_color=RED, secondary_color=AQUA, modifiers=[]):
                 secondary_words +=['happy','friday']
                 print "        - Happy Friday"
             if "iloveyou" in modifiers and "midnight" not in primary_words and (secondary_counter+3)%20 == 0 and secondary_counter < 100:
-                #Uses the "I" in midnight, so it doesn't run if midnight is lit up
+                # Uses the "I" in midnight, so it doesn't run if midnight is lit up
                 secondary_words += ['i','love','you']
                 print "        - I Love You"
             if "byjeremy" in modifiers and "oclock" not in primary_words and secondary_counter>=100 and secondary_counter<=105:
-                #Uses "Clock" in "oclock", so it doesn't run if oclock is lit up
+                # Uses "Clock" in "oclock", so it doesn't run if oclock is lit up
                 secondary_words += ['this','is2','a2','word','clock','built','with','love','by','jeremy','heart2']
                 print "        - This is a word clock built with love by Jeremy <3"
             if "leah" in modifiers:
