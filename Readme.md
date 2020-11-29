@@ -17,6 +17,7 @@ It's a Wordclock!  See a full walkthrough of the build on my website: https://ww
 * Setup the time zone and change the default password by running `sudo raspi-config`. I also suggest expanding the SD card partition and reducing GPU memory to the minimum since the Pi is running headless.
 * Install all the latest updates using `sudo apt update && sudo apt dist-upgrade -y`. Reboot when complete.
 * SSH back in and run this command to download and run an installer script (forked from Adafruit to use a newer library version): `curl https://raw.githubusercontent.com/sciguy14/Raspberry-Pi-Installer-Scripts/master/rgb-matrix.sh > rgb-matrix.sh && sudo bash rgb-matrix.sh`. This will install the RGB panel libraries and help configure the RTC. Run the script from the home directory (/home/pi). Choose the "QUALITY" option when prompted if you've added the solder jumper described earlier. Reboot when complete.
+* Install pip for python3 and numpy: `sudo apt install -y python3-pip libatlas3-base libgfortran5 && sudo pip3 install numpy`
 * Set the RTC Time
     * Run `date` to confirm that the date/time that was retreived from the network time server is correct. If not, check your timezone settings.
     * Run `sudo hwclock -w` to write the current datetime to the RTC.
