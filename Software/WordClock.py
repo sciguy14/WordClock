@@ -268,7 +268,7 @@ def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondar
 def run(mode="clock", primary_color=RED, secondary_color=AQUA, modifiers=[]):
     if mode == "basic_test":
         print("Testing each word & Color...")
-        for key in m.iterkeys():
+        for key in m.keys():
             print("  %s" % (key))
             setDisplay([key], RED)
             time.sleep(0.2)
@@ -280,9 +280,9 @@ def run(mode="clock", primary_color=RED, secondary_color=AQUA, modifiers=[]):
         print("Done.")
     elif mode == "time_test":
         print("Testing All Times...")
-        for h in range(24):
-            for m in range(60):
-                setDisplay(getTimeWords(datetime(2020, 1, 1, h, m, 0)),primary_color)
+        for hour in range(24):
+            for minute in range(60):
+                setDisplay(getTimeWords(datetime(2020, 1, 1, hour, minute, 0)),primary_color)
                 time.sleep(0.2)
         matrix.Clear()
         print("Done.")
