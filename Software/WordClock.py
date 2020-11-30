@@ -220,10 +220,11 @@ def getTimeWords(t=None):
 # tertiary_words: The list of words to light up it the tertiary color (the Leah <3 Logo, in our case)
 # fade_steps_time is the added delay time between each of the fade steps (float, seconds)
 # fade_steps_number is the number of intermediate colors in the fade
-start_buff = np.zeros([MATRIX_H * MATRIX_DIV, MATRIX_W * MATRIX_DIV, 3], dtype=np.uint8)
-end_buff = start_buff
-def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondary_color=AQUA, tertiary_words=[], tertiary_color = WHITE, fade_steps_time=.1, fade_steps_number=5):
+start_buff = np.zeros((MATRIX_H * MATRIX_DIV, MATRIX_W * MATRIX_DIV, 3), dtype=np.int16)
+def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondary_color=AQUA, tertiary_words=[], tertiary_color = WHITE, fade_steps_time=0, fade_steps_number=20):
     global start_buff
+
+    end_buff = np.zeros((MATRIX_H * MATRIX_DIV, MATRIX_W * MATRIX_DIV, 3), dtype=np.int16)
 
     for word in primary_words + secondary_words + tertiary_words:
         pixel_x = (m[word]["start"]-1) * MATRIX_DIV
@@ -236,29 +237,20 @@ def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondar
                     color = secondary_color
                 elif word in tertiary_words:
                     color = tertiary_color
-                end_buff[pixel_y+y_adder, pixel_x + x_adder] = color
+                end_buff[pixel_y+y_adder][pixel_x + x_adder] = color
 
-
-    matrix.SetImage(Image.fromarray(end_buff))
-                
-                
     # Fade between buffers
-
-    #frame = matrix.CreateFrameCanvas()
-    #for f in range(fade_steps_number):
-    #    print("start frame " + str(f))
-    #    for y in range(MATRIX_H * MATRIX_DIV):
-    #        for x in range(MATRIX_W * MATRIX_DIV):
-    #            r = start_buff[x][y][0] + (((end_buff[x][y][0]-start_buff[x][y][0])/fade_steps_number)*f)
-    #            g = start_buff[x][y][1] + (((end_buff[x][y][1]-start_buff[x][y][1])/fade_steps_number)*f)
-    #            b = start_buff[x][y][2] + (((end_buff[x][y][2]-start_buff[x][y][2])/fade_steps_number)*f)
-    #
-    #            frame.SetPixel(x, y, r, g, b)
-    #
-    #    matrix.SwapOnVSync(frame)
-    #    time.sleep(fade_steps_time)
+    diff_buff = end_buff - start_buff
+    frame_add = diff_buff/fade_steps_number
+    frame = start_buff
+    for f in range(fade_steps_number):
+        frame = frame + frame_add
+        matrix.SetImage(Image.fromarray(frame.astype('uint8'), 'RGB'))
+        time.sleep(fade_steps_time)
 
     start_buff = end_buff # Use this global var for enabling state fades
+
+    
 
 # Runs the Word Clock in a certain mode
 # mode (pick one):
