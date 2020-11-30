@@ -30,6 +30,20 @@ It's a Wordclock!  See a full walkthrough of the build on my website: https://ww
 * Reboot.
 * The wordclock should run and show the time after reboot. It is no longer necessary to keep the wordclock connected to Wi-Fi/Ethernet, as the onboard RTC will keep time. But you can keep it connected if you want to ensure that you stay syncronized with the network time server.
 
+### Hue Integration
+
+To use the hue integration, follow these additional steps
+* Install requests: `sudo pip3 install requests`
+* Add a `config.ini` file in the Software directory (same directory as WordClock.py) with the following contents (substituting your values):
+```
+[hue]
+bridge_ip = 111.111.111.111
+api_key = abcdefghijklmnopqrstuvwxyz1234567890
+light_group = 5
+```
+* Use the Clip API debugger to get the above info and to obtain an API key for your application: https://developers.meethue.com/develop/get-started-2/
+* The wordclock will now only be on when at least one of the lights in the specified group is also on.
+
 License
 -------
 This work is licensed under the [GNU GPL v3](http://www.gnu.org/licenses/gpl.html).

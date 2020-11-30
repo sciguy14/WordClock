@@ -17,6 +17,25 @@ from rgbmatrix import RGBMatrix, RGBMatrixOptions
 from PIL import Image
 import numpy as np
 
+# Optional Hue Integration
+hue_trigger = False 
+try:
+    import requests
+    import configparser
+    import pathlib
+    
+    config = configparser.ConfigParser()
+    config.read(pathlib.Path(__file__).parent.absolute().joinpath('config.ini'))
+    hue_bridge_ip = config.get('hue', 'bridge_ip')
+    hue_api_key = config.get('hue', 'api_key')
+    hue_light_group = config.get('hue', 'light_group')
+except ImportError:
+    print("Requests library not found. Hue Integration disabled.")
+except:
+    print("Configuration not accepted. Hue integrated disabled.")
+else:
+    hue_trigger = True
+
 # Constants
 MATRIX_W      = 32 # Number of Actual X Pixels
 MATRIX_H      = 32 # Number of Actual Y Pixels
@@ -226,18 +245,32 @@ def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondar
 
     end_buff = np.zeros((MATRIX_H * MATRIX_DIV, MATRIX_W * MATRIX_DIV, 3), dtype=np.int16)
 
-    for word in primary_words + secondary_words + tertiary_words:
-        pixel_x = (m[word]["start"]-1) * MATRIX_DIV
-        pixel_y = (m[word]["row"] - 1) * MATRIX_DIV
-        for y_adder in range(m[word]["height"]*MATRIX_DIV):
-            for x_adder in range(m[word]["length"]*MATRIX_DIV):
-                if word in primary_words:
-                    color = primary_color
-                elif word in secondary_words:
-                    color = secondary_color
-                elif word in tertiary_words:
-                    color = tertiary_color
-                end_buff[pixel_y+y_adder][pixel_x + x_adder] = color
+    display_on = True
+    if hue_trigger:
+        try:
+            r =requests.get('http://' + hue_bridge_ip + '/api/' + hue_api_key + '/groups/' + hue_light_group)
+            r.raise_for_status()
+            display_on = r.json()["state"]["any_on"] # We will keep the wordclock display on if any lights in the room are on.
+        except requests.exceptions.HTTPError as e:
+            print("Hue HTTP error: " + str(e))
+        except requests.exceptions.RequestException as e:  # This is the correct syntax
+            print("Hue Network error: " + str(e))
+
+    if not display_on:
+        print("Display off because no lights in the room are on.")
+    else:
+        for word in primary_words + secondary_words + tertiary_words:
+            pixel_x = (m[word]["start"]-1) * MATRIX_DIV
+            pixel_y = (m[word]["row"] - 1) * MATRIX_DIV
+            for y_adder in range(m[word]["height"]*MATRIX_DIV):
+                for x_adder in range(m[word]["length"]*MATRIX_DIV):
+                    if word in primary_words:
+                        color = primary_color
+                    elif word in secondary_words:
+                        color = secondary_color
+                    elif word in tertiary_words:
+                        color = tertiary_color
+                    end_buff[pixel_y+y_adder][pixel_x + x_adder] = color
 
     # Fade between buffers
     diff_buff = end_buff - start_buff
