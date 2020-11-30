@@ -25,7 +25,8 @@ It's a Wordclock!  See a full walkthrough of the build on my website: https://ww
 * SSH back into the Pi and clone this repo to your home directory (`git clone https://github.com/sciguy14/WordClock.git`). You should now have a `WordClock` folder and a `rpi-rgb-led-matrix` folder in your /home/pi directory. You can delete the `rgb-matrix.sh` that was used to install the libraries.
 * Confirm that everything is functional by running one of the library demos: `sudo /home/pi/rpi-rgb-led-matrix/examples-api-use/demo -t 10 -D 4`
 * Navigate into the `WordClock/Software/` directory and make `WordClock.py` executable: `chmod +x WordClock.py`
-* Add this to crontab (`crontab -e`): `@reboot sudo /home/pi/WordClock/Software/WordClock.py > /dev/null 2>&1`
+* Install screen: `sudo apt install screen`
+* Add this to crontab (`crontab -e`): `@reboot screen -dmS wordclock sudo /home/pi/WordClock/Software/WordClock.py`. By launching the script in a screen, you can easily ssh in and attach to the already running session to see debug output without having to kill and manuall relaunch it.
 * Reboot.
 * The wordclock should run and show the time after reboot. It is no longer necessary to keep the wordclock connected to Wi-Fi/Ethernet, as the onboard RTC will keep time. But you can keep it connected if you want to ensure that you stay syncronized with the network time server.
 
