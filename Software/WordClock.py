@@ -34,6 +34,7 @@ except ImportError:
 except:
     print("Configuration not accepted. Hue integrated disabled.")
 else:
+    print("Hue configuration loaded. Will track lighting group " + hue_light_group + ".")
     hue_trigger = True
 
 # Constants
@@ -50,6 +51,7 @@ YELLOW  = [255, 255, 0  ]
 FUCHSIA = [255, 0,   255]
 AQUA    = [0,   255, 255]
 WHITE   = [255, 255, 255]
+DIM     = [20, 20, 20]
 
 # Birthday
 BIRTH_MONTH = 8
@@ -256,21 +258,26 @@ def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondar
         except requests.exceptions.RequestException as e:  # This is the correct syntax
             print("Hue Network error: " + str(e))
 
+
     if not display_on:
-        print("Display off because no lights in the room are on.")
-    else:
-        for word in primary_words + secondary_words + tertiary_words:
-            pixel_x = (m[word]["start"]-1) * MATRIX_DIV
-            pixel_y = (m[word]["row"] - 1) * MATRIX_DIV
-            for y_adder in range(m[word]["height"]*MATRIX_DIV):
-                for x_adder in range(m[word]["length"]*MATRIX_DIV):
-                    if word in primary_words:
-                        color = primary_color
-                    elif word in secondary_words:
-                        color = secondary_color
-                    elif word in tertiary_words:
-                        color = tertiary_color
-                    end_buff[pixel_y+y_adder][pixel_x + x_adder] = color
+        # To indicate that the clock is still powered, we will dimly light the heart up, but turn the rest off
+        primary_words = []
+        secondary_words = []
+        tertiary_words = ['heart1']
+        tertiary_color = DIM # Dimly illuminate the heart
+
+    for word in primary_words + secondary_words + tertiary_words:
+        pixel_x = (m[word]["start"]-1) * MATRIX_DIV
+        pixel_y = (m[word]["row"] - 1) * MATRIX_DIV
+        for y_adder in range(m[word]["height"]*MATRIX_DIV):
+            for x_adder in range(m[word]["length"]*MATRIX_DIV):
+                if word in primary_words:
+                    color = primary_color
+                elif word in secondary_words:
+                    color = secondary_color
+                elif word in tertiary_words:
+                    color = tertiary_color
+                end_buff[pixel_y+y_adder][pixel_x + x_adder] = color
 
     # Fade between buffers
     diff_buff = end_buff - start_buff
