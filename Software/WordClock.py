@@ -251,10 +251,10 @@ display_on = True
 def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondary_color=AQUA, tertiary_words=[], tertiary_color = WHITE, fade_steps_time=0, fade_steps_number=20):
     global start_buff
     global display_on
-    global hue_trigger
 
     end_buff = np.zeros((MATRIX_H * MATRIX_DIV, MATRIX_W * MATRIX_DIV, 3), dtype=np.int16)
 
+    error = False
     if hue_trigger:
         tries = 0
         while tries < HUE_RETRIES:
@@ -281,10 +281,9 @@ def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondar
             else:
                 break
         else:
-            # We have failed to talk to Hue too many times so we're going to disable the integration for the remainder of this session
-            # If currently in the OFF state, turn the heart red as an error indicator.
-            hue_trigger = False
-            print("Hue integration disabled due to too many errors")
+            # We have failed to talk to the Hue controller three times
+            # Make the heart red to indicate a problem.
+            error = True
 
 
     if not display_on:
@@ -293,8 +292,10 @@ def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondar
         secondary_words = []
         tertiary_words = ['heart1']
         tertiary_color = DIM # Dimly illuminate the heart
-        if not hue_trigger:
-            tertiary_color = DIM_RED # Dimly illuminate heart in red if hue trigger was just disabled due to an error.
+
+        if error:
+            tertiary_color = DIM_RED # Dimly illuminate heart in red if hue integration is having issues.
+            
 
     for word in primary_words + secondary_words + tertiary_words:
         pixel_x = (m[word]["start"]-1) * MATRIX_DIV
