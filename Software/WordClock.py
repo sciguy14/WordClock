@@ -18,7 +18,7 @@ from PIL import Image
 import numpy as np
 
 # Optional Hue Integration
-hue_trigger = False 
+hue_trigger = False
 try:
     import requests
     import configparser
@@ -37,7 +37,11 @@ else:
     print("Hue configuration loaded. Will track lighting group " + hue_light_group + ".")
     hue_trigger = True
 
-# Constants
+# Hue Integration Constants
+HUE_RETRIES = 3
+HUE_TIMEOUT = 2 # seconds
+
+# Display Constants
 MATRIX_W      = 32 # Number of Actual X Pixels
 MATRIX_H      = 32 # Number of Actual Y Pixels
 MATRIX_DEPTH  = 3  # Color Depth (RGB=3)
@@ -52,6 +56,7 @@ FUCHSIA = [255, 0,   255]
 AQUA    = [0,   255, 255]
 WHITE   = [255, 255, 255]
 DIM     = [20, 20, 20]
+DIM_RED = [30, 0 , 0]
 
 # Birthday
 BIRTH_MONTH = 8
@@ -242,21 +247,44 @@ def getTimeWords(t=None):
 # fade_steps_time is the added delay time between each of the fade steps (float, seconds)
 # fade_steps_number is the number of intermediate colors in the fade
 start_buff = np.zeros((MATRIX_H * MATRIX_DIV, MATRIX_W * MATRIX_DIV, 3), dtype=np.int16)
+display_on = True
 def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondary_color=AQUA, tertiary_words=[], tertiary_color = WHITE, fade_steps_time=0, fade_steps_number=20):
     global start_buff
+    global display_on
+    global hue_trigger
 
     end_buff = np.zeros((MATRIX_H * MATRIX_DIV, MATRIX_W * MATRIX_DIV, 3), dtype=np.int16)
 
-    display_on = True
     if hue_trigger:
-        try:
-            r =requests.get('http://' + hue_bridge_ip + '/api/' + hue_api_key + '/groups/' + hue_light_group)
-            r.raise_for_status()
-            display_on = r.json()["state"]["any_on"] # We will keep the wordclock display on if any lights in the room are on.
-        except requests.exceptions.HTTPError as e:
-            print("Hue HTTP error: " + str(e))
-        except requests.exceptions.RequestException as e:  # This is the correct syntax
-            print("Hue Network error: " + str(e))
+        tries = 0
+        while tries < HUE_RETRIES:
+            try:
+                tries = tries + 1
+                r = requests.get('http://' + hue_bridge_ip + '/api/' + hue_api_key + '/groups/' + hue_light_group, timeout=HUE_TIMEOUT)
+                r.raise_for_status()
+                lights_on = r.json()["state"]["any_on"]
+                # We will keep the wordclock display on if any lights in the room are on.
+                if lights_on and not display_on:
+                    print("The lights turned on. Turning the clock on.")
+                    display_on = True
+                elif not lights_on and display_on:
+                    print("The lights turned off. Turning the clock off.")
+                    display_on = False
+                else:
+                    display_on = lights_on
+            except requests.exceptions.HTTPError as e:
+                print("Hue HTTP error: " + str(e))
+            except requests.exceptions.RequestException as e:
+                print("Hue Network error: " + str(e))
+            except Exception as e:
+                print("Unknown Hue error: " + str(e))
+            else:
+                break
+        else:
+            # We have failed to talk to Hue too many times so we're going to disable the integration for the remainder of this session
+            # If currently in the OFF state, turn the heart red as an error indicator.
+            hue_trigger = False
+            print("Hue integration disabled due to too many errors")
 
 
     if not display_on:
@@ -265,6 +293,8 @@ def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondar
         secondary_words = []
         tertiary_words = ['heart1']
         tertiary_color = DIM # Dimly illuminate the heart
+        if not hue_trigger:
+            tertiary_color = DIM_RED # Dimly illuminate heart in red if hue trigger was just disabled due to an error.
 
     for word in primary_words + secondary_words + tertiary_words:
         pixel_x = (m[word]["start"]-1) * MATRIX_DIV
