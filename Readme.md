@@ -40,6 +40,7 @@ To use the hue integration, follow these additional steps
 bridge_ip = 111.111.111.111
 api_key = abcdefghijklmnopqrstuvwxyz1234567890
 light_group = 5
+daylight_sensor = 1
 ```
 * Use the Clip API debugger to get the above info and to obtain an API key for your application: https://developers.meethue.com/develop/get-started-2/
 * The wordclock will now only be on when at least one of the lights in the specified group is also on.

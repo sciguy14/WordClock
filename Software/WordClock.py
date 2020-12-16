@@ -29,6 +29,7 @@ try:
     hue_bridge_ip = config.get('hue', 'bridge_ip')
     hue_api_key = config.get('hue', 'api_key')
     hue_light_group = config.get('hue', 'light_group')
+    hue_daylight_sensor = config.get('hue', 'daylight_sensor')
 except ImportError:
     print("Requests library not found. Hue Integration disabled.")
 except:
@@ -40,6 +41,7 @@ else:
 # Hue Integration Constants
 HUE_RETRIES = 3
 HUE_TIMEOUT = 2 # seconds
+HUE_USE_DAYLIGHT_SENSOR = True # Keep clock on during daylight hours, regardless of lighting state
 
 # Display Constants
 MATRIX_W      = 32 # Number of Actual X Pixels
@@ -260,18 +262,40 @@ def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondar
         while tries < HUE_RETRIES:
             try:
                 tries = tries + 1
-                r = requests.get('http://' + hue_bridge_ip + '/api/' + hue_api_key + '/groups/' + hue_light_group, timeout=HUE_TIMEOUT)
-                r.raise_for_status()
-                lights_on = r.json()["state"]["any_on"]
-                # We will keep the wordclock display on if any lights in the room are on.
-                if lights_on and not display_on:
-                    print("The lights turned on. Turning the clock on.")
+
+                daylight = None
+                if HUE_USE_DAYLIGHT_SENSOR:
+                    daylight_state = requests.get('http://' + hue_bridge_ip + '/api/' + hue_api_key + '/sensors/' + hue_daylight_sensor, timeout=HUE_TIMEOUT)
+                    daylight_state.raise_for_status()
+                    daylight = daylight_state.json()["state"]["daylight"]
+                
+                lights_state = requests.get('http://' + hue_bridge_ip + '/api/' + hue_api_key + '/groups/' + hue_light_group, timeout=HUE_TIMEOUT)
+                lights_state.raise_for_status()
+                lights_on = lights_state.json()["state"]["any_on"]
+
+                # If daylight control is enabled, then the clock will always be on during daylight hours.
+                if daylight is True:
+                    if not display_on:
+                        print("It is now daylight. Turning the clock on.")
                     display_on = True
-                elif not lights_on and display_on:
-                    print("The lights turned off. Turning the clock off.")
-                    display_on = False
-                else:
-                    display_on = lights_on
+
+                # If daylight control is disabled, or it is enabled but it is currently nighttime, then the display will be on whenever the lights are on.
+                elif daylight is False or daylight is None:
+                    if lights_on and not display_on:
+                        if daylight is False:
+                            print("It is past daylight hours, but the lights have been turned on. Turning the clock on.")
+                        elif daylight is None:
+                            print("The lights have been turned on. Turning the clock on.")
+                        display_on = True
+                    elif not lights_on and display_on:
+                        if daylight is False:
+                            print("The lights have been turned off and it is past daylight hours. Turning the clock off.")
+                        elif daylight is None:
+                            print("The lights have been turned off. Turning the clock off.")
+                        display_on = False
+                    else:
+                        display_on = lights_on
+
             except requests.exceptions.HTTPError as e:
                 print("Hue HTTP error: " + str(e))
             except requests.exceptions.RequestException as e:
