@@ -4,6 +4,7 @@
 # Made for Leah by Jeremy
 # Original: (c) 2016 Blum Idea Labs
 # Updated: (c) 2020 Blum Idea Labs
+# Updated: (c) 2025 Blum Idea Labs
 # www.jeremyblum.com
 
 # Follow the instructions in the GitHub Repo README for prerequisites that must be installed first.
@@ -221,7 +222,7 @@ def getTimeWords(t=None):
 # fade_steps_time is the added delay time between each of the fade steps (float, seconds)
 # fade_steps_number is the number of intermediate colors in the fade
 start_buff = np.zeros((MATRIX_H * MATRIX_DIV, MATRIX_W * MATRIX_DIV, 3), dtype=np.int16)
-def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondary_color=AQUA, tertiary_words=[], tertiary_color = WHITE, fade_steps_time=0, fade_steps_number=20):
+def setDisplay(primary_words=[], primary_color=RED, secondary_words=[], secondary_color=AQUA, tertiary_words=[], tertiary_color = WHITE, fade_steps_time=.05, fade_steps_number=50):
     global start_buff
 
     end_buff = np.zeros((MATRIX_H * MATRIX_DIV, MATRIX_W * MATRIX_DIV, 3), dtype=np.int16)
@@ -314,7 +315,7 @@ def run(mode="clock", primary_color=RED, secondary_color=AQUA, modifiers=[]):
                 tertiary_words = ['leah1', 'heart1']
                 tertiary_color = FADE_COLORS[fade_counter]
 
-            setDisplay(primary_words,primary_color,secondary_words,secondary_color,tertiary_words,tertiary_color)
+            setDisplay(primary_words, primary_color, secondary_words, secondary_color, tertiary_words, tertiary_color)
             fade_counter += 1
             if fade_counter > 5:
                 fade_counter = 0
